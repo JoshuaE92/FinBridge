@@ -16,9 +16,16 @@ function resolveLanguage(language) {
     return LANGUAGE_NAMES[language] || language;
 }
 
-export async function getFinancialAdvice({ message, language, culture }) {
+export async function getFinancialAdvice({ message, language, culture, userContext }) {
     const languageName = resolveLanguage(language);
     const cultureData = culturalContext[culture] || {};
+
+    const contextBlock = userContext
+        ? `
+    What we already know about this user (use it to personalize your answer, and
+    refer to their documents/balances when relevant):
+    ${userContext}`
+        : "";
 
     // Fold the cultural context into the prompt so the advice is actually
     // tailored to the selected culture instead of being generic.
@@ -38,6 +45,7 @@ export async function getFinancialAdvice({ message, language, culture }) {
     Give short, culturally relevant financial advice that fits ${culture} customs.
     Example topics: saving for family, managing expenses, smart budgeting.
     ${culturalNotes}
+    ${contextBlock}
     Question: ${message || "How can I save more money each month?"}
     `;
 

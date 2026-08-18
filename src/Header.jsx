@@ -30,6 +30,9 @@ function Header() {
                         <Link to="/explain">{t("explain", { defaultValue: "Explain" })}</Link>
                     </li>
                     <li className="inline-block mx-4">
+                        <Link to="/documents">{t("documents", { defaultValue: "Documents" })}</Link>
+                    </li>
+                    <li className="inline-block mx-4">
                         <Link to="/credit">{t("credit", { defaultValue: "Credit" })}</Link>
                     </li>
                     <li className="inline-block mx-4">

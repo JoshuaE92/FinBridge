@@ -4,12 +4,14 @@ import {
     answerDocumentQuestion,
 } from "../services/geminiService.js";
 import { getFinancialContext } from "../services/plaidService.js";
+import { saveDocument } from "../services/documentStore.js";
 
 const router = express.Router();
 
 router.post("/", async (req, res) => {
     try {
-        const { imageBase64, mimeType, question, language, culture } = req.body || {};
+        const { imageBase64, mimeType, question, language, culture, userId, fileName } =
+            req.body || {};
 
         if (!imageBase64 && (!question || !question.trim())) {
             return res
@@ -29,7 +31,17 @@ router.post("/", async (req, res) => {
             financialContext,
         });
 
-        res.json(result);
+        // Persist the document + analysis so the agent remembers it later
+        // (best-effort — no-ops when Firebase or the image is absent).
+        const saved = await saveDocument({
+            userId,
+            imageBase64,
+            mimeType,
+            analysis: result,
+            fileName,
+        });
+
+        res.json({ ...result, docId: saved?.docId || null });
     } catch (error) {
         console.error("Explain route error:", error);
         const body = { error: "Error explaining document" };

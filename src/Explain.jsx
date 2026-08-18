@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { getUserId } from './userId.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -87,7 +88,7 @@ export default function Explain() {
         setDocImage(null);
         setChat([]);
         try {
-            const body = { language, culture };
+            const body = { language, culture, userId: getUserId(), fileName: file.name };
             let img;
             if (file.type === 'application/pdf') {
                 // Rasterize page 1 and send THAT image so boxes align.

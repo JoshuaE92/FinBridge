@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getUserId } from './userId.js';
 
 const API_BASE_URL =
     (import.meta.env.VITE_BACKEND_URL &&
@@ -57,6 +58,7 @@ function Chatbot() {
                     message: trimmed,
                     language,
                     culture,
+                    userId: getUserId(),
                 }),
             });
 
