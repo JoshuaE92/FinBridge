@@ -1,10 +1,11 @@
 import express from "express";
-import { db } from "../firebase/initFirebase.js";
+import { getDb } from "../firebase/initFirebase.js";
 
 const router = express.Router();
 
 router.get("/:id", async (req, res) => {
     try {
+        const db = getDb();
         const userRef = db.collection("users").doc(req.params.id);
         const userSnap = await userRef.get();
 
@@ -15,12 +16,13 @@ router.get("/:id", async (req, res) => {
         }
     } catch (error) {
         console.error("Get user error:", error);
-        res.status(500).json({ error: "Failed to fetch user data" });
+        res.status(503).json({ error: "User profiles are not available." });
     }
 });
 
 router.put("/:id", async (req, res) => {
     try {
+        const db = getDb();
         const { language, culture } = req.body;
         await db.collection("users").doc(req.params.id).set(
             {
@@ -32,7 +34,7 @@ router.put("/:id", async (req, res) => {
         res.json({ message: "User updated successfully" });
     } catch (error) {
         console.error("Update user error:", error);
-        res.status(500).json({ error: "Failed to update user data" });
+        res.status(503).json({ error: "User profiles are not available." });
     }
 });
 

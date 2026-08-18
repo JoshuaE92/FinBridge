@@ -2,24 +2,31 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 
+// Firebase is only used by the optional /user profile route. We initialize it
+// lazily so the rest of the backend (advice, translate) can boot and run even
+// when no service-account credentials are configured.
+let dbInstance = null;
 
-const rawPath = process.env.FIREBASE_SA_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
-const saPath = rawPath && rawPath.trim();
+export function getDb() {
+    if (dbInstance) return dbInstance;
 
-if (!saPath) {
-    throw new Error(
-        "FIREBASE_SA_PATH or GOOGLE_APPLICATION_CREDENTIALS is not set. Set it to the path of your service account JSON."
-    );
-}
+    const rawPath =
+        process.env.FIREBASE_SA_PATH ||
+        process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+        "";
+    const saPath = rawPath && rawPath.trim();
 
-let app;
-if (saPath) {
+    if (!saPath) {
+        throw new Error(
+            "Firebase is not configured. Set FIREBASE_SA_PATH to your service account JSON to use the /user route."
+        );
+    }
+
     const serviceAccount = JSON.parse(fs.readFileSync(saPath, "utf8"));
-    app = initializeApp({
+    const app = initializeApp({
         credential: cert(serviceAccount),
     });
-} else {
-    app = initializeApp();
-}
 
-export const db = getFirestore(app);
+    dbInstance = getFirestore(app);
+    return dbInstance;
+}

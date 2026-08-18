@@ -61,7 +61,11 @@ function Chatbot() {
 
             if (!res.ok) {
                 const payload = await res.json().catch(() => ({}));
-                throw new Error(payload?.error || `Request failed (${res.status})`);
+                throw new Error(
+                    payload?.detail ||
+                    payload?.error ||
+                    `Request failed (${res.status})`
+                );
             }
 
             const data = await res.json();
