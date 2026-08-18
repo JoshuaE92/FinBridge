@@ -1,10 +1,12 @@
 import Chatbot from './Chatbot.jsx';
+import AccountDashboard from './AccountDashboard.jsx';
 
 function Dashboard() {
     return (
-    <div>
-        <Chatbot />
-    </div>
+        <div className="min-h-screen bg-gray-50">
+            <AccountDashboard />
+            <Chatbot />
+        </div>
     );
 }
 

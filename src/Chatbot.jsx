@@ -27,6 +27,7 @@ function Chatbot() {
     const [error, setError] = useState('');
     const [language, setLanguage] = useState('en');
     const [culture, setCulture] = useState('American');
+    const [open, setOpen] = useState(false);
     const listRef = useRef(null);
 
     useEffect(() => {
@@ -95,12 +96,23 @@ function Chatbot() {
     };
 
     return (
-        <div>
-            <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-96 bg-white shadow-lg border-l border-gray-200 flex flex-col">
+        <>
+            {open && (
+            <div className="fixed bottom-24 right-6 z-50 flex h-[70vh] max-h-[600px] w-96 max-w-[calc(100vw-3rem)] flex-col rounded-2xl bg-white shadow-2xl border border-gray-200">
                 <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-neutral-900">
-                        {t('title')}
-                    </h2>
+                    <div className="flex items-start justify-between">
+                        <h2 className="text-lg font-semibold text-neutral-900">
+                            {t('title')}
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={() => setOpen(false)}
+                            aria-label="Close chat"
+                            className="text-neutral-400 hover:text-neutral-700 text-xl leading-none"
+                        >
+                            ×
+                        </button>
+                    </div>
                     <p className="text-sm text-neutral-500">{t('subtitle')}</p>
                     <div className="mt-3 flex gap-2">
                         <select
@@ -169,7 +181,24 @@ function Chatbot() {
                     </button>
                 </div>
             </div>
-        </div>
+            )}
+
+            {/* Floating launcher */}
+            <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                aria-label={open ? 'Close chat' : 'Open chat'}
+                className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 transition"
+            >
+                {open ? (
+                    <span className="text-2xl leading-none">×</span>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.84L3 20l1.09-3.27A7.94 7.94 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                )}
+            </button>
+        </>
     );
 }
 
