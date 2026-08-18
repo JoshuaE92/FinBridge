@@ -2,12 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 function Header() {
-    const { t, i18n } = useTranslation('header');
-
-    // Function to change language
-    const changeLanguage = (lng) => {
-        i18n.changeLanguage(lng);
-    };
+    const { t } = useTranslation('header');
 
     return (
         <header className="bg-white text-black shadow-md p-4 flex items-center justify-between w-full">
@@ -30,6 +25,12 @@ function Header() {
                     </li>
                     <li className="inline-block mx-4">
                         <Link to="/dashboard">{t("dashboard")}</Link>
+                    </li>
+                    <li className="inline-block mx-4">
+                        <Link to="/explain">{t("explain", { defaultValue: "Explain" })}</Link>
+                    </li>
+                    <li className="inline-block mx-4">
+                        <Link to="/credit">{t("credit", { defaultValue: "Credit" })}</Link>
                     </li>
                     <li className="inline-block mx-4">
                         <Link to="/about">{t("about")}</Link>

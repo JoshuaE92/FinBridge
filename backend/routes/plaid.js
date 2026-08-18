@@ -4,12 +4,10 @@ import {
     CountryCode,
 } from "plaid";
 import { plaidClient, isPlaidConfigured } from "../services/plaidService.js";
+import { getAccessToken, setAccessToken } from "../services/plaidTokenStore.js";
+import { getCreditRoadmap } from "../services/geminiService.js";
 
 const router = express.Router();
-
-// DEMO-ONLY token store. A real app would persist the access_token per user in
-// a database; for the sandbox demo we keep the most recent one in memory.
-let accessToken = null;
 
 const ASSET_TYPES = new Set(["depository", "investment"]);
 const LIABILITY_TYPES = new Set(["credit", "loan"]);
@@ -28,7 +26,7 @@ async function fetchAllTransactions() {
     let hasMore = true;
     while (hasMore) {
         const response = await plaidClient.transactionsSync({
-            access_token: accessToken,
+            access_token: getAccessToken(),
             cursor,
         });
         added = added.concat(response.data.added);
@@ -85,7 +83,7 @@ router.post("/exchange_public_token", async (req, res) => {
             return res.status(400).json({ error: "public_token is required" });
         }
         const response = await plaidClient.itemPublicTokenExchange({ public_token });
-        accessToken = response.data.access_token;
+        setAccessToken(response.data.access_token);
         res.json({ ok: true });
     } catch (error) {
         console.error("exchange_public_token error:", error.response?.data || error.message);
@@ -95,17 +93,17 @@ router.post("/exchange_public_token", async (req, res) => {
 
 // Whether an account is currently linked (used by the frontend on load).
 router.get("/status", (req, res) => {
-    res.json({ linked: Boolean(accessToken) });
+    res.json({ linked: Boolean(getAccessToken()) });
 });
 
 // 3) The full dashboard payload: accounts, net worth, cash flow, spending, txns.
 router.get("/overview", async (req, res) => {
-    if (!accessToken) {
+    if (!getAccessToken()) {
         return res.status(400).json({ error: "No linked account. Connect a bank first." });
     }
     try {
         const [acctRes, allTxns] = await Promise.all([
-            plaidClient.accountsBalanceGet({ access_token: accessToken }),
+            plaidClient.accountsBalanceGet({ access_token: getAccessToken() }),
             fetchAllTransactions(),
         ]);
 
@@ -184,6 +182,76 @@ router.get("/overview", async (req, res) => {
     } catch (error) {
         console.error("overview error:", error.response?.data || error.message);
         res.status(500).json({ error: "Failed to load account overview" });
+    }
+});
+
+// 4) Credit-building roadmap derived from the linked accounts. NOTE: Plaid does
+// not provide a credit score here — we compute *signals* and let Gemini coach.
+router.get("/credit-roadmap", async (req, res) => {
+    if (!getAccessToken()) {
+        return res.status(400).json({ error: "No linked account. Connect a bank first." });
+    }
+    try {
+        const [acctRes, allTxns] = await Promise.all([
+            plaidClient.accountsBalanceGet({ access_token: getAccessToken() }),
+            fetchAllTransactions(),
+        ]);
+        const accounts = acctRes.data.accounts;
+
+        const creditAccounts = accounts.filter((a) => a.type === "credit");
+        const depository = accounts.filter((a) => a.type === "depository");
+
+        const creditLimit = creditAccounts.reduce(
+            (s, a) => s + (a.balances.limit || 0),
+            0
+        );
+        const creditBalance = creditAccounts.reduce(
+            (s, a) => s + (a.balances.current || 0),
+            0
+        );
+        const cashReserves = depository.reduce(
+            (s, a) => s + (a.balances.available ?? a.balances.current ?? 0),
+            0
+        );
+
+        // 30-day spending, to express reserves as months of buffer.
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        const cutoffStr = cutoff.toISOString().slice(0, 10);
+        const spending = allTxns
+            .filter((t) => t.date >= cutoffStr && t.amount > 0)
+            .reduce((s, t) => s + t.amount, 0);
+
+        const signals = {
+            hasCreditCard: creditAccounts.length > 0,
+            creditCardCount: creditAccounts.length,
+            creditUtilizationPct:
+                creditLimit > 0
+                    ? Math.round((creditBalance / creditLimit) * 100)
+                    : null,
+            hasRevolvingBalance: creditBalance > 0,
+            cashReserves: Number(cashReserves.toFixed(2)),
+            monthsOfBuffer:
+                spending > 0 ? Number((cashReserves / spending).toFixed(1)) : null,
+            hasLoans: accounts.some((a) => a.type === "loan"),
+            currency: accounts[0]?.balances?.iso_currency_code || "USD",
+        };
+
+        const { language, culture } = req.query;
+        const roadmap = await getCreditRoadmap({
+            signals,
+            language: language || "en",
+            culture: culture || "American",
+        });
+
+        res.json({ signals, roadmap });
+    } catch (error) {
+        console.error("credit-roadmap error:", error.response?.data || error.message);
+        const body = { error: "Failed to build credit roadmap" };
+        if (process.env.NODE_ENV !== "production") {
+            body.detail = error?.message;
+        }
+        res.status(500).json(body);
     }
 });
 
